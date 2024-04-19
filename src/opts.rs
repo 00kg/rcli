@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{fmt::Display, path::Path, str::FromStr};
 
 use clap::Parser;
 
@@ -15,6 +15,13 @@ pub enum SubCommand {
     Csv(CsvOpts),
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum OutputFormat {
+    Json,
+    Yaml,
+    Toml,
+}
+
 #[derive(Debug, Parser)]
 pub struct CsvOpts {
     /// Input file path
@@ -22,8 +29,12 @@ pub struct CsvOpts {
     pub input: String,
 
     /// Output file path
-    #[arg(short, long, default_value = "output.json")]
-    pub output: String,
+    #[arg(short, long)]
+    pub output: Option<String>,
+
+    /// Output file format
+    #[arg(long, value_parser = parse_format ,default_value = "json")]
+    pub format: OutputFormat,
 
     /// Delimiter
     #[arg(short, long, default_value_t = ',')]
@@ -39,5 +50,57 @@ fn verify_input_file(file_name: &str) -> Result<String, &'static str> {
         Ok(file_name.into())
     } else {
         Err("File does not exist")
+    }
+}
+
+fn parse_format(format: &str) -> Result<OutputFormat, anyhow::Error> {
+    // match format.to_lowercase().as_str() {
+    //     "json" => Ok(OutputFormat::Json),
+    //     "yaml" => Ok(OutputFormat::Yaml),
+    //     "toml" => Ok(OutputFormat::Toml),
+    //     _ => Err("Invalid format"),
+    // }
+
+    format.parse() // &str.parse() 需要实现FromStr trait
+}
+
+impl From<OutputFormat> for &'static str {
+    fn from(format: OutputFormat) -> Self {
+        match format {
+            OutputFormat::Json => "json",
+            OutputFormat::Yaml => "yaml",
+            OutputFormat::Toml => "toml",
+        }
+    }
+}
+
+// impl TryFrom<&str> for OutputFormat {
+//     type Error = anyhow::Error;
+//     fn try_from(format: &str) -> Result<Self, Self::Error> {
+//         match format.to_lowercase().as_str() {
+//             "json" => Ok(OutputFormat::Json),
+//             "yaml" => Ok(OutputFormat::Yaml),
+//             "toml" => Ok(OutputFormat::Toml),
+//             v => anyhow::bail!("Unsupported format: {}",v),
+//         }
+//     }
+// }
+
+impl FromStr for OutputFormat {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "json" => Ok(OutputFormat::Json),
+            "yaml" => Ok(OutputFormat::Yaml),
+            "toml" => Ok(OutputFormat::Toml),
+            v => anyhow::bail!("Unsupported format: {}", v),
+        }
+    }
+}
+
+impl Display for OutputFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", Into::<&str>::into(*self))
     }
 }
