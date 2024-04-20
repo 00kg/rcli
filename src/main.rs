@@ -1,5 +1,11 @@
+use std::fs;
+
 use clap::Parser;
-use rcli::{process_csv, process_decode, process_encode, process_genpass, Opts, SubCommand};
+use rcli::{
+    process_csv, process_decode, process_encode, process_generate_key, process_genpass,
+    process_text_sign, process_text_verify, Opts, SubCommand,
+};
+use zxcvbn::zxcvbn;
 
 fn main() -> anyhow::Result<()> {
     let opts = Opts::parse();
@@ -14,17 +20,59 @@ fn main() -> anyhow::Result<()> {
             process_csv(&opts.input, output, opts.format)?;
         }
 
-        SubCommand::GenPass(opts) => process_genpass(
-            opts.length,
-            opts.uppercase,
-            opts.lowercase,
-            opts.number,
-            opts.symbol,
-        )?,
+        SubCommand::GenPass(opts) => {
+            let password = process_genpass(
+                opts.length,
+                opts.uppercase,
+                opts.lowercase,
+                opts.number,
+                opts.symbol,
+            )?;
+            let estimate = zxcvbn(&password, &[])?;
+            print!("{}", password);
+            eprintln!("Password strength: {}", estimate.score());
+        }
 
         SubCommand::Base64(subcmd) => match subcmd {
-            rcli::Base64SubCommand::Encode(opts) => process_encode(&opts.input, opts.format)?,
-            rcli::Base64SubCommand::Decode(opts) => process_decode(&opts.input, opts.format)?,
+            rcli::Base64SubCommand::Encode(opts) => {
+                let encode_data = process_encode(&opts.input, opts.format)?;
+                println!("{}", encode_data);
+            }
+            rcli::Base64SubCommand::Decode(opts) => {
+                let decode_data = process_decode(&opts.input, opts.format)?;
+                // TODO: decoded data might not be string
+                let decode_data = String::from_utf8(decode_data)?;
+                println!("{}", decode_data);
+            }
+        },
+
+        SubCommand::Text(subcmd) => match subcmd {
+            rcli::TextSubCommand::Sign(opts) => {
+                // match opts.format {
+                //     rcli::TextSignFormat::Blake3 => process_text_sign(&opts.input, &opts.key, opts.format)?,
+                //     rcli::TextSignFormat::Ed25519 => todo!(),
+                // }
+                let signed = process_text_sign(&opts.input, &opts.key, opts.format)?;
+                println!("\nhash: {}", signed);
+            }
+            rcli::TextSubCommand::Verify(opts) => {
+                let verified = process_text_verify(&opts.input, &opts.key, opts.format, &opts.sig)?;
+                println!("\nverify: {}", verified);
+            }
+
+            rcli::TextSubCommand::Generate(opts) => {
+                let key = process_generate_key(opts.format)?;
+                match opts.format {
+                    rcli::TextSignFormat::Blake3 => {
+                        let name = opts.output.join("blake3.txt");
+                        fs::write(name, &key[0])?;
+                    }
+                    rcli::TextSignFormat::Ed25519 => {
+                        fs::write(opts.output.join("ed25519.sk"), &key[0])?;
+                        fs::write(opts.output.join("ed25519.pk"), &key[1])?;
+                    }
+                }
+            }
         },
     }
 
