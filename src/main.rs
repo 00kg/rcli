@@ -2,8 +2,9 @@ use std::fs;
 
 use clap::Parser;
 use rcli::{
-    process_csv, process_decode, process_encode, process_generate_key, process_genpass,
-    process_text_sign, process_text_verify, Opts, SubCommand,
+    process_csv, process_decode, process_decrypt, process_encode, process_encrypt,
+    process_generate_key, process_genpass, process_text_sign, process_text_verify, Opts,
+    SubCommand,
 };
 use zxcvbn::zxcvbn;
 
@@ -72,6 +73,16 @@ fn main() -> anyhow::Result<()> {
                         fs::write(opts.output.join("ed25519.pk"), &key[1])?;
                     }
                 }
+            }
+            rcli::TextSubCommand::Encrypt(opts) => {
+                let ciphertext = process_encrypt(&opts.input, &opts.key, &opts.nonce, opts.format)?;
+                println!("\nciphertext:{}", ciphertext);
+            }
+            rcli::TextSubCommand::Decrypt(opts) => {
+                let data = process_decrypt(&opts.input, &opts.key, &opts.nonce, opts.format)?;
+                // println!("\ndecrypted:{}", data);
+                eprint!("\ndecrypted:");
+                println!("{}", data);
             }
         },
     }

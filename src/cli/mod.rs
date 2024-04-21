@@ -8,6 +8,7 @@ use std::path::PathBuf;
 pub use self::base64::Base64Format;
 pub use self::base64::Base64SubCommand;
 pub use self::csv::OutputFormat;
+pub use self::text::TextCryptFormat;
 pub use self::text::TextSignFormat;
 pub use self::text::TextSubCommand;
 

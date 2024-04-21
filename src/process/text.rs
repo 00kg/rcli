@@ -8,8 +8,12 @@ use ed25519_dalek::Verifier;
 use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
 use rand::rngs::OsRng;
 
-use crate::process_genpass;
 use crate::{cli::TextSignFormat, utils::get_reader};
+use crate::{process_genpass, TextCryptFormat};
+use chacha20poly1305::{
+    aead::{Aead, KeyInit},
+    ChaCha20Poly1305, Key, Nonce,
+};
 
 pub trait TextSign {
     fn sign(&self, reader: &mut dyn Read) -> Result<Vec<u8>>;
@@ -29,6 +33,14 @@ pub trait KeyGenerator {
     fn generate() -> Result<Vec<Vec<u8>>>;
 }
 
+pub trait TextEncrypt {
+    fn encrypt(&self, reader: &mut dyn Read) -> Result<Vec<u8>>;
+}
+
+pub trait TextDecrypt {
+    fn decrypt(&self, reader: &mut dyn Read) -> Result<Vec<u8>>;
+}
+
 struct Blake3 {
     key: [u8; 32],
 }
@@ -41,6 +53,11 @@ struct Ed25519Signer {
 struct Ed25519Verifier {
     /// Verify the data from the reader with the signature
     key: VerifyingKey,
+}
+
+struct Chacha20poly1305Obj {
+    key: Key,
+    nonce: Nonce,
 }
 
 pub fn process_text_sign(input: &str, key: &str, format: TextSignFormat) -> Result<String> {
@@ -87,6 +104,50 @@ pub fn process_generate_key(format: TextSignFormat) -> Result<Vec<Vec<u8>>> {
         TextSignFormat::Blake3 => Blake3::generate(),
         TextSignFormat::Ed25519 => Ed25519Signer::generate(),
     }
+}
+
+pub fn process_encrypt(
+    input: &str,
+    key: &str,
+    nonce: &str,
+    format: TextCryptFormat,
+) -> Result<String> {
+    let mut reader = get_reader(input)?;
+    let encrypted = match format {
+        TextCryptFormat::Chacha20poly1305 => {
+            // Chacha20poly1305Obj::try_new(&key.as_bytes()[..32].try_into().unwrap(), &nonce.as_bytes()[..12].try_into().unwrap())
+            // let key:[u8;32] = key.as_bytes().try_into().unwrap();
+            // let nonce:[u8;12] = nonce.as_bytes().try_into().unwrap();
+            let key = str_to_u8_array_32(key);
+            let nonce = str_to_u8_array_12(nonce);
+            // println!("key {:?}",key);
+            // println!("nonce {:?}",nonce);
+            let c = Chacha20poly1305Obj::try_new(&key, &nonce)?;
+            c.encrypt(&mut reader)?
+        }
+    };
+    let encrypted = URL_SAFE_NO_PAD.encode(encrypted);
+    Ok(encrypted)
+}
+
+pub fn process_decrypt(
+    input: &str,
+    key: &str,
+    nonce: &str,
+    format: TextCryptFormat,
+) -> Result<String> {
+    let mut reader = get_reader(input)?;
+
+    let data = match format {
+        TextCryptFormat::Chacha20poly1305 => {
+            let key = str_to_u8_array_32(key);
+            let nonce = str_to_u8_array_12(nonce);
+            let c = Chacha20poly1305Obj::try_new(&key, &nonce)?;
+            c.decrypt(&mut reader)?
+        }
+    };
+
+    Ok(String::from_utf8(data)?)
 }
 
 impl TextSign for Blake3 {
@@ -164,6 +225,34 @@ impl KeyGenerator for Ed25519Signer {
     }
 }
 
+impl TextEncrypt for Chacha20poly1305Obj {
+    fn encrypt(&self, reader: &mut dyn Read) -> Result<Vec<u8>> {
+        let mut buf = Vec::new();
+        reader.read_to_end(&mut buf)?;
+
+        let cipher = ChaCha20Poly1305::new(&self.key);
+        let ciphertext: Vec<u8> = cipher
+            .encrypt(&self.nonce, buf.as_ref())
+            .map_err(|e| anyhow::anyhow!(e))?;
+        Ok(ciphertext)
+    }
+}
+
+impl TextDecrypt for Chacha20poly1305Obj {
+    fn decrypt(&self, reader: &mut dyn Read) -> Result<Vec<u8>> {
+        let mut buf = Vec::new();
+        reader.read_to_end(&mut buf)?;
+        let data = URL_SAFE_NO_PAD.decode(buf)?;
+
+        let cipher = ChaCha20Poly1305::new(&self.key);
+        let data: Vec<u8> = cipher
+            .decrypt(&self.nonce, &*data)
+            .map_err(|e| anyhow::anyhow!(e))?;
+
+        Ok(data)
+    }
+}
+
 impl Blake3 {
     pub fn new(key: [u8; 32]) -> Self {
         Self { key }
@@ -195,6 +284,47 @@ impl Ed25519Verifier {
         let key = VerifyingKey::from_bytes(key.try_into()?)?;
         Ok(Self::new(key))
     }
+}
+
+impl Chacha20poly1305Obj {
+    pub fn new(key: Key, nonce: Nonce) -> Self {
+        Self { key, nonce }
+    }
+    pub fn try_new(key: &[u8; 32], nonce: &[u8; 12]) -> Result<Self> {
+        let key = Key::from_slice(key);
+        let nonce = Nonce::from_slice(nonce);
+        Ok(Self::new(*key, *nonce))
+    }
+}
+
+fn str_to_u8_array_32(input: &str) -> [u8; 32] {
+    let mut byte_array = [0u8; 32];
+    let bytes = input.as_bytes();
+
+    for (i, &item) in bytes.iter().enumerate() {
+        if i < 32 {
+            byte_array[i] = item;
+        } else {
+            break;
+        }
+    }
+
+    byte_array
+}
+
+fn str_to_u8_array_12(input: &str) -> [u8; 12] {
+    let mut byte_array = [0u8; 12];
+    let bytes = input.as_bytes();
+
+    for (i, &item) in bytes.iter().enumerate() {
+        if i < 12 {
+            byte_array[i] = item;
+        } else {
+            break;
+        }
+    }
+
+    byte_array
 }
 
 #[cfg(test)]
