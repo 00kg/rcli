@@ -7,16 +7,16 @@ const SYMBOL: &[u8] = b"!@#$%^&*~,.;";
 
 pub fn process_genpass(
     length: u8,
-    upper: bool,
-    lower: bool,
-    number: bool,
-    symbol: bool,
+    no_upper: bool,
+    no_lower: bool,
+    no_number: bool,
+    no_symbol: bool,
 ) -> anyhow::Result<String> {
     let mut rng = rand::thread_rng();
     let mut password = Vec::new();
     let mut chars = Vec::new();
 
-    if upper {
+    if !no_upper {
         chars.extend_from_slice(UPPER);
         password.push(
             *UPPER
@@ -24,7 +24,7 @@ pub fn process_genpass(
                 .expect("chars won't be empty in this context"),
         );
     }
-    if lower {
+    if !no_lower {
         chars.extend_from_slice(LOWER);
         password.push(
             *LOWER
@@ -32,7 +32,7 @@ pub fn process_genpass(
                 .expect("chars won't be empty in this context"),
         );
     }
-    if number {
+    if !no_number {
         chars.extend_from_slice(NUMBER);
         password.push(
             *NUMBER
@@ -40,7 +40,7 @@ pub fn process_genpass(
                 .expect("chars won't be empty in this context"),
         );
     }
-    if symbol {
+    if !no_symbol {
         chars.extend_from_slice(SYMBOL);
         password.push(
             *SYMBOL
@@ -66,6 +66,5 @@ pub fn process_genpass(
     // print!("{}", password);
     // // output password strength in stderr
     // eprintln!("Password strength: {}", estimate.score());
-
     Ok(password)
 }

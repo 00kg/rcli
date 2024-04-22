@@ -24,14 +24,14 @@ fn main() -> anyhow::Result<()> {
         SubCommand::GenPass(opts) => {
             let password = process_genpass(
                 opts.length,
-                opts.uppercase,
-                opts.lowercase,
-                opts.number,
-                opts.symbol,
+                opts.no_uppercase,
+                opts.no_lowercase,
+                opts.no_number,
+                opts.no_symbol,
             )?;
             let estimate = zxcvbn(&password, &[])?;
+            eprintln!("\nPassword strength: {}", estimate.score());
             print!("{}", password);
-            eprintln!("Password strength: {}", estimate.score());
         }
 
         SubCommand::Base64(subcmd) => match subcmd {

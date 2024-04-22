@@ -352,4 +352,23 @@ mod tests {
         assert!(pk.verify(&mut &data[..], &sig)?);
         Ok(())
     }
+
+    #[test]
+    fn test_chacha20poly1305_encrypt_decrypt() -> Result<()> {
+        let data = b"Hello World";
+        let key = [0u8; 32];
+        let nonce = [0u8; 12];
+
+        let chacha20poly1305_obj = Chacha20poly1305Obj::try_new(&key, &nonce)?;
+        let ciphertext = chacha20poly1305_obj.encrypt(&mut &data[..])?;
+        let ciphertext = URL_SAFE_NO_PAD.encode(ciphertext);
+
+        // println!("ciphertext:{:?}",ciphertext);
+        let text = chacha20poly1305_obj.decrypt(&mut &ciphertext.as_bytes().to_vec()[..])?;
+        // println!("{:?}",String::from_utf8(data.to_vec()));
+        // println!("{:?}",String::from_utf8(text));
+
+        assert_eq!(*data, *text);
+        Ok(())
+    }
 }
