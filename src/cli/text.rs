@@ -5,9 +5,11 @@ use crate::CmdExector;
 use super::{verify_file, verify_path};
 use anyhow::{Ok, Result};
 use clap::Parser;
+use enum_dispatch::enum_dispatch;
 use tokio::fs;
 
 #[derive(Debug, Parser)]
+#[enum_dispatch(CmdExector)]
 pub enum TextSubCommand {
     #[command(about = "Sign a message with a private/shared key")]
     Sign(TextSignOpts),
@@ -209,17 +211,5 @@ impl CmdExector for DecryptOpts {
         eprint!("\ndecrypted:");
         println!("{}", data);
         Ok(())
-    }
-}
-
-impl CmdExector for TextSubCommand {
-    async fn execute(self) -> anyhow::Result<()> {
-        match self {
-            TextSubCommand::Sign(opts) => opts.execute().await,
-            TextSubCommand::Verify(opts) => opts.execute().await,
-            TextSubCommand::Generate(opts) => opts.execute().await,
-            TextSubCommand::Encrypt(opts) => opts.execute().await,
-            TextSubCommand::Decrypt(opts) => opts.execute().await,
-        }
     }
 }

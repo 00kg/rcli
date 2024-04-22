@@ -70,18 +70,6 @@ impl From<OutputFormat> for &'static str {
     }
 }
 
-// impl TryFrom<&str> for OutputFormat {
-//     type Error = anyhow::Error;
-//     fn try_from(format: &str) -> Result<Self, Self::Error> {
-//         match format.to_lowercase().as_str() {
-//             "json" => Ok(OutputFormat::Json),
-//             "yaml" => Ok(OutputFormat::Yaml),
-//             "toml" => Ok(OutputFormat::Toml),
-//             v => anyhow::bail!("Unsupported format: {}",v),
-//         }
-//     }
-// }
-
 impl FromStr for OutputFormat {
     type Err = anyhow::Error;
 
