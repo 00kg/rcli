@@ -8,7 +8,9 @@ use rcli::{
 };
 use zxcvbn::zxcvbn;
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
     let opts = Opts::parse();
 
     match opts.cmd {
@@ -83,6 +85,12 @@ fn main() -> anyhow::Result<()> {
                 // println!("\ndecrypted:{}", data);
                 eprint!("\ndecrypted:");
                 println!("{}", data);
+            }
+        },
+        SubCommand::Http(subcmd) => match subcmd {
+            rcli::HttpSubCommand::Serve(opts) => {
+                rcli::process_http_serve(opts.path, opts.port).await?;
+                // println!("Serving at http://0.0.0.0:{}",opts.port);
             }
         },
     }
