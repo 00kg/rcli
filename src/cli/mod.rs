@@ -6,6 +6,8 @@ mod text;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::CmdExector;
+
 pub use self::base64::Base64Format;
 pub use self::base64::Base64SubCommand;
 pub use self::csv::OutputFormat;
@@ -57,6 +59,18 @@ fn verify_path(path: &str) -> Result<PathBuf, &'static str> {
         Ok(p.into())
     } else {
         Err("Path does not exist or is not a directory")
+    }
+}
+
+impl CmdExector for SubCommand {
+    async fn execute(self) -> anyhow::Result<()> {
+        match self {
+            SubCommand::Csv(opts) => opts.execute().await,
+            SubCommand::GenPass(opts) => opts.execute().await,
+            SubCommand::Base64(cmd) => cmd.execute().await,
+            SubCommand::Text(cmd) => cmd.execute().await,
+            SubCommand::Http(cmd) => cmd.execute().await,
+        }
     }
 }
 

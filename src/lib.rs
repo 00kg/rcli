@@ -15,3 +15,8 @@ pub use process::{process_decrypt, process_encrypt};
 pub use process::{process_generate_key, process_text_sign, process_text_verify};
 
 pub use process::process_http_serve;
+
+#[allow(async_fn_in_trait)]
+pub trait CmdExector {
+    async fn execute(self) -> anyhow::Result<()>;
+}
