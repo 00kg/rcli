@@ -1,0 +1,3 @@
+### test tower
+
+GET http://localhost:8080/tower/
