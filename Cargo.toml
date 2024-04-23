@@ -22,6 +22,7 @@ rand = "0.8.5"
 serde = { version = "1.0.198", features = ["derive"] }
 serde_json = "1.0.116"
 serde_yaml = "0.9.34"
+tera = "1.19.1"
 time = "0.3.36"
 tokio = { version = "1.37.0", features = ["net", "rt-multi-thread", "fs", "tokio-macros"] }
 toml = "0.8.12"
