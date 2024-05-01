@@ -153,13 +153,13 @@ impl From<TextSignFormat> for &'static str {
 
 impl fmt::Display for TextCryptFormat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Into::<TextCryptFormat>::into(*self))
+        write!(f, "{}", Into::<&str>::into(*self))
     }
 }
 
 impl fmt::Display for TextSignFormat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Into::<TextSignFormat>::into(*self))
+        write!(f, "{}", Into::<&str>::into(*self))
     }
 }
 
@@ -210,6 +210,21 @@ impl CmdExector for DecryptOpts {
         // println!("\ndecrypted:{}", data);
         eprint!("\ndecrypted:");
         println!("{}", data);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_text_crypt_format_display() -> anyhow::Result<()> {
+        let i = TextCryptFormat::Chacha20poly1305;
+
+        let r = format!("r:{}", i);
+
+        assert_eq!("r:chacha20poly1305", r);
         Ok(())
     }
 }

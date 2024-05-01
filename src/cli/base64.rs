@@ -83,6 +83,6 @@ impl From<Base64Format> for &'static str {
 
 impl fmt::Display for Base64Format {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Into::<Base64Format>::into(*self))
+        write!(f, "{}", Into::<&str>::into(*self))
     }
 }
